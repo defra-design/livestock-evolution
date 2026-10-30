@@ -30,7 +30,7 @@ const seed = () => [
   { id:'MOV-1004',direction:'on',from:'44/209/0317',to:'37/123/4567',date:'18 Oct 2026',tags:['UK 371234 000011'],status:'rejected',initiator:'you',origin:'You reported a movement on',reason:'The other keeper says the cattle did not leave their holding.',history:[] },
   { id:'MOV-1005',direction:'off',from:'37/123/4567',to:'66/204/0141',date:'17 Oct 2026',tags:['UK 371234 000012'],status:'unconfirmed',initiator:'you',origin:'You reported a movement off',history:[] },
   { id:'MOV-1006',direction:'off',from:'37/123/4567',to:'22/100/0044',date:'16 Oct 2026',tags:['UK 371234 000015'],status:'disputed',initiator:'you',origin:'You reported a movement off',reason:'The parties disagree about the cattle received.',history:[] },
-  { id:'MOV-1007',direction:'on',from:'56/312/0056',to:'37/123/4567',date:'22 Oct 2026',tags:['UK 371234 000032','UK 371234 000033'],status:'awaiting',initiator:'other',origin:'Other keeper reported a movement off',history:[] }
+  { id:'MOV-1007',direction:'off',from:'56/312/0056',to:'37/123/4567',date:'22 Oct 2026',tags:['UK 371234 000032','UK 371234 000033'],status:'awaiting',initiator:'other',origin:'Other keeper reported a movement off',history:[] }
 ]
 const LABELS={awaiting:'Awaiting confirmation',changes:'Changes proposed',confirmed:'Confirmed',rejected:'Rejected – awaiting response',disputed:'Disputed',unconfirmed:'Unconfirmed',withdrawn:'Withdrawn'}
 const COLOURS={awaiting:'govuk-tag--blue',changes:'govuk-tag--purple',confirmed:'govuk-tag--green',rejected:'govuk-tag--orange',disputed:'govuk-tag--red',unconfirmed:'govuk-tag--yellow',withdrawn:'govuk-tag--grey'}
@@ -43,6 +43,31 @@ function animalRow(tag) {
   }
   return {tag, breed:[{code:'HF',name:'Holstein Friesian'},{code:'BRB',name:'British Blue'},{code:'AA',name:'Aberdeen Angus'},{code:'HE',name:'Hereford'}][index % 4], sex:index % 2 === 0 ? 'Female' : 'Male', dateOfBirth:new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(2020+(index % 5),index % 12,1+(index % 28))))}
 }
+function reportedDates(r) {
+  return {
+    off: r.offDate || (r.direction === 'off' ? r.date : null),
+    on: r.onDate || (r.direction === 'on' ? r.date : null)
+  }
+}
+function ownDateKey(r) { return r.to === CURRENT_HOLDING ? 'on' : 'off' }
+function otherDateKey(key) { return key === 'on' ? 'off' : 'on' }
+function parseDateFields(body, prefix = '') {
+  const day = Number(body[prefix + 'day']), month = Number(body[prefix + 'month']), year = Number(body[prefix + 'year'])
+  const value = new Date(Date.UTC(year, month - 1, day))
+  if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year) ||
+    year < 1900 || year > 2100 || value.getUTCDate() !== day ||
+    value.getUTCMonth() + 1 !== month || value.getUTCFullYear() !== year || value > new Date()) return null
+  return new Intl.DateTimeFormat('en-GB', {day:'numeric', month:'long', year:'numeric', timeZone:'UTC'}).format(value)
+}
+function sameDate(a, b) {
+  const toTime = text => { const t = Date.parse(String(text || '').replace(/^(\d{1,2}) (\w+) (\d{4})$/, '$2 $1, $3')); return Number.isNaN(t) ? String(text || '') : t }
+  return toTime(a) === toTime(b)
+}
+function changedDates(r, p) {
+  const dates = reportedDates(r)
+  const updated = {off: p.offDate === undefined ? dates.off : p.offDate, on: p.onDate === undefined ? dates.on : p.onDate}
+  return ['off','on'].filter(k => dates[k] && updated[k] && !sameDate(dates[k],updated[k])).map(k => ({key:k,label:k==='off'?'Date cattle left':'Date cattle arrived',original:dates[k],proposed:updated[k]}))
+}
 function proposalDiff(r) {
   if (!r.proposal) return null
   const original = new Set(r.tags)
@@ -51,6 +76,7 @@ function proposalDiff(r) {
     removed: r.tags.filter(tag => !proposed.has(tag)).map(animalRow),
     added: r.proposal.tags.filter(tag => !original.has(tag)).map(animalRow),
     dateChanged: r.date !== r.proposal.date,
+    dateChanges: changedDates(r, r.proposal),
     originalCount: r.tags.length,
     proposedCount: r.proposal.tags.length
   }
@@ -58,7 +84,7 @@ function proposalDiff(r) {
 function decorate(r){
  const holdingDirection = r.to === CURRENT_HOLDING ? 'on' : r.from === CURRENT_HOLDING ? 'off' : null
  const otherHolding = holdingDirection === 'on' ? r.from : holdingDirection === 'off' ? r.to : null
- return {...r,holdingDirection,otherHolding,offDate:r.offDate || (r.direction === 'off' ? r.date : null),onDate:r.onDate || (r.direction === 'on' ? r.date : null),proposalDiff:proposalDiff(r),fromAddress:r.fromAddress || PREMISES_ADDRESSES[r.from] || '',toAddress:r.toAddress || PREMISES_ADDRESSES[r.to] || '',animals:r.tags.map(animalRow),reportedBy:r.reportedBy || (r.initiator === 'you' ? 'You (keeper)' : 'Opposing keeper'),reportedAt:r.reportedAt || 'Not recorded in demonstration data',label:LABELS[r.status],colour:COLOURS[r.status],count:r.tags.length,isMine:r.initiator==='you',canReview:r.status==='awaiting'&&r.initiator==='other',canRespondChanges:r.status==='changes'&&r.initiator==='you',canRespondRejection:r.status==='rejected'&&r.initiator==='you'}}
+ return {...r,holdingDirection,otherHolding,offDate:reportedDates(r).off,onDate:reportedDates(r).on,proposalDiff:proposalDiff(r),fromAddress:r.fromAddress || PREMISES_ADDRESSES[r.from] || '',toAddress:r.toAddress || PREMISES_ADDRESSES[r.to] || '',animals:r.tags.map(animalRow),reportedBy:r.reportedBy || (r.initiator === 'you' ? 'You (keeper)' : 'Opposing keeper'),reportedAt:r.reportedAt || 'Not recorded in demonstration data',label:LABELS[r.status],colour:COLOURS[r.status],count:r.tags.length,isMine:r.initiator==='you',canReview:r.status==='awaiting'&&r.initiator==='other',canRespondChanges:r.status==='changes'&&r.initiator==='you',canRespondRejection:r.status==='rejected'&&r.initiator==='you'}}
 // Responsibility belongs to the current holding, not an individual user.
 function actionWith(r) {
   if (r.status === 'confirmed' || r.status === 'withdrawn') return 'none'
@@ -106,12 +132,59 @@ function issue(res,page,req,r,message,extras={}){res.status(400);return render(r
  router.get(ROOT+'/:id',(req,res)=>{const r=must(req,res);if(r)return render(req,res,'detail',{movement:decorate(r),pageName:'Movement '+r.id})})
  router.get(ROOT+'/:id/activity',(req,res)=>{const r=must(req,res);if(r)return render(req,res,'activity',{movement:decorate(r),pageName:'Movement activity'})})
  router.get(ROOT+'/:id/review',(req,res)=>{const r=must(req,res);if(r)return res.redirect(ROOT+'/'+encodeURIComponent(r.id)+'#movement-action')})
- router.post(ROOT+'/:id/review',(req,res)=>{const r=must(req,res);if(!r)return;if(r.status!=='awaiting'||r.initiator!=='other')return redirect(res,'/'+encodeURIComponent(r.id));const choice=escape(req.body['review-action']);if(!['confirm','amend','reject'].includes(choice))return issue(res,'detail',req,r,'Select what you want to do');if(choice==='amend')return redirect(res,'/'+encodeURIComponent(r.id)+'/propose');if(choice==='reject')return redirect(res,'/'+encodeURIComponent(r.id)+'/reject');r.status='confirmed';recordEvent(r,'Movement confirmed','The opposing keeper confirmed the reported movement.','Opposing keeper (keeper)');return redirect(res,'/'+encodeURIComponent(r.id)+'/outcome')})
+ router.post(ROOT+'/:id/review',(req,res)=>{const r=must(req,res);if(!r)return;if(r.status!=='awaiting'||r.initiator!=='other')return redirect(res,'/'+encodeURIComponent(r.id));const choice=escape(req.body['review-action']);if(!['confirm','amend','reject'].includes(choice))return issue(res,'detail',req,r,'Select what you want to do');if(choice==='amend')return redirect(res,'/'+encodeURIComponent(r.id)+'/propose');if(choice==='reject')return redirect(res,'/'+encodeURIComponent(r.id)+'/reject');return redirect(res,'/'+encodeURIComponent(r.id)+'/confirm-date')})
+ // A date newly provided by the reviewing keeper is not a proposed correction.
+ function datePage(req,res,r,action,error) {
+   const dates=reportedDates(r), key=ownDateKey(r), other=otherDateKey(key)
+   return render(req,res,'confirm-date', {movement:decorate(r),action,
+     ownDateKey:key, knownDate:dates[key], referenceDate:dates[other], error})
+ }
+ router.get(ROOT+'/:id/confirm-date',(req,res)=>{
+   const r=must(req,res); if(!r)return
+   if (!eligible(r)) return redirect(res,'/'+encodeURIComponent(r.id))
+   return datePage(req,res,r,'confirm')
+ })
+ router.post(ROOT+'/:id/confirm-date',(req,res)=>{
+   const r=must(req,res); if(!r)return
+   if (!eligible(r)) return redirect(res,'/'+encodeURIComponent(r.id))
+   const k=ownDateKey(r), dates=reportedDates(r)
+   const choice=escape(req.body['date-choice'])
+   let value
+   if(choice==='yes' && dates[otherDateKey(k)]) value=dates[otherDateKey(k)]
+   else if(choice==='existing' && dates[k]) value=dates[k]
+   else if(choice==='no' || choice==='enter') value=parseDateFields(req.body)
+   if (!value) return datePage(req,res,r,'confirm','Select an answer and enter a valid date if needed')
+   if (dates[k] && !sameDate(dates[k],value)) {
+     const d=draft(req,r,true)
+     d.changes=['date'];d[k+'Date']=value
+     return redirect(res,'/'+encodeURIComponent(r.id)+'/propose/check')
+   }
+   if (!dates[k]) { r[k+'Date']=value; r.reviewProvidedDate=k; recordEvent(r,'Movement date provided',(k==='on'?'Date cattle arrived: ':'Date cattle left: ')+value,'Reviewing keeper (keeper)') }
+   r.status='confirmed'
+   recordEvent(r,'Movement confirmed','The reviewing keeper confirmed the movement.','Reviewing keeper (keeper)')
+   return redirect(res,'/'+encodeURIComponent(r.id)+'/outcome')
+ })
+ router.get(ROOT+'/:id/propose/own-date',(req,res)=>{
+   const r=must(req,res);if(!r)return
+   if(!eligible(r))return redirect(res,'/'+encodeURIComponent(r.id))
+   return datePage(req,res,r,'propose')
+ })
+ router.post(ROOT+'/:id/propose/own-date',(req,res)=>{
+   const r=must(req,res);if(!r)return
+   if(!eligible(r))return redirect(res,'/'+encodeURIComponent(r.id))
+   const d=draft(req,r),k=ownDateKey(r),dates=reportedDates(r),choice=escape(req.body['date-choice'])
+   let value
+   if(choice==='yes' && dates[otherDateKey(k)]) value=dates[otherDateKey(k)]
+   else if(choice==='no' || choice==='enter') value=parseDateFields(req.body)
+   if(!value)return datePage(req,res,r,'propose','Select an answer and enter a valid date if needed')
+   d[k+'Date']=value
+   return redirect(res,'/'+encodeURIComponent(r.id)+(d.changes.includes('animals')?'/propose/animals':'/propose/date'))
+ })
  // Draft proposal journey. Draft data is distinct from the recorded movement and its audit history.
  function eligible(r) { return r.status === 'awaiting' && r.initiator === 'other' }
  function draft(req, r, reset) {
    const drafts = req.session.data.rfmProposalDrafts || (req.session.data.rfmProposalDrafts = {})
-   if (reset || !drafts[r.id]) drafts[r.id] = { changes: [], tags: r.tags.slice(), date: r.date, note: '' }
+   if (reset || !drafts[r.id]) drafts[r.id] = { changes: [], tags: r.tags.slice(), date: r.date, offDate: reportedDates(r).off, onDate: reportedDates(r).on, note: '' }
    return drafts[r.id]
  }
  function show(req, res, page, r, extras = {}) {
@@ -121,6 +194,7 @@ function issue(res,page,req,r,message,extras={}){res.status(400);return render(r
      proposedAnimals: d.tags.map(tag => ({ ...animalRow(tag), encodedTag: encodeURIComponent(tag) })),
      dateSelected: d.changes.includes('date'),
      animalsSelected: d.changes.includes('animals'),
+     ownDateKey: ownDateKey(r),
      newTags: d.newTags || [],
      failures: d.failures || [],
      failureCount: (d.failures || []).length,
@@ -144,7 +218,7 @@ function issue(res,page,req,r,message,extras={}){res.status(400);return render(r
    if (!values.length) return show(req, res, 'propose', r, {error: 'Select what you want to change'})
    const d = draft(req, r)
    d.changes = [...new Set(values)]
-   return redirect(res, '/' + encodeURIComponent(r.id) + (d.changes.includes('animals') ? '/propose/animals' : '/propose/date'))
+   return redirect(res, '/' + encodeURIComponent(r.id) + (!reportedDates(r)[ownDateKey(r)] ? '/propose/own-date' : (d.changes.includes('animals') ? '/propose/animals' : '/propose/date')))
  })
  router.get(ROOT + '/:id/propose/animals', (req, res) => {
    const r = must(req, res); if (!r) return
@@ -284,23 +358,26 @@ function issue(res,page,req,r,message,extras={}){res.status(400);return render(r
    return redirect(res, '/' + encodeURIComponent(r.id) + (d.changes.includes('date') ? '/propose/date' : '/propose/check'))
  })
  router.get(ROOT + '/:id/propose/date', (req, res) => {
-   const r = must(req, res); if (!r) return
-   if (!eligible(r)) return redirect(res, '/' + encodeURIComponent(r.id))
-   if (!draft(req, r).changes.includes('date')) return redirect(res, '/' + encodeURIComponent(r.id) + '/propose')
-   return show(req, res, 'propose-date', r)
+   const r = must(req,res); if (!r) return
+   if (!eligible(r)) return redirect(res,'/'+encodeURIComponent(r.id))
+   const d = draft(req,r)
+   if (!d.changes.includes('date')) return redirect(res,'/'+encodeURIComponent(r.id)+'/propose')
+   return show(req,res,'propose-date',r)
  })
- router.post(ROOT + '/:id/propose/date', (req, res) => {
-   const r = must(req, res); if (!r) return
-   if (!eligible(r)) return redirect(res, '/' + encodeURIComponent(r.id))
-   const d = draft(req, r)
-   const day = Number(req.body.day), month = Number(req.body.month), year = Number(req.body.year)
-   const date = new Date(Date.UTC(year, month - 1, day))
-   if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year) ||
-       year < 2000 || year > 2100 || date.getUTCDate() !== day || date.getUTCMonth() + 1 !== month || date.getUTCFullYear() !== year || date > new Date()) {
-     return show(req, res, 'propose-date', r, {error: 'Enter a real movement date that is not in the future'})
+ router.post(ROOT + '/:id/propose/date', (req,res) => {
+   const r=must(req,res); if (!r) return
+   if (!eligible(r)) return redirect(res,'/'+encodeURIComponent(r.id))
+   const d=draft(req,r)
+   for (const key of ['off','on']) {
+     const choice=escape(req.body[key+'-choice'])
+     if (choice === 'keep') { d[key+'Date']=d[key+'Date'] || reportedDates(r)[key]; continue }
+     if (choice === 'unknown' && !reportedDates(r)[key]) { d[key+'Date']=null; continue }
+     if (choice !== 'change') return show(req,res,'propose-date',r,{error:'Select whether to change each movement date'})
+     const date=parseDateFields(req.body,key+'-')
+     if (!date) return show(req,res,'propose-date',r,{error:'Enter a real '+(key==='off'?'departure':'arrival')+' date that is not in the future'})
+     d[key+'Date']=date
    }
-   d.date = new Intl.DateTimeFormat('en-GB', {day:'numeric', month:'short', year:'numeric', timeZone:'UTC'}).format(date)
-   return redirect(res, '/' + encodeURIComponent(r.id) + '/propose/check')
+   return redirect(res,'/'+encodeURIComponent(r.id)+'/propose/check')
  })
  router.get(ROOT + '/:id/propose/check', (req, res) => {
    const r = must(req, res); if (!r) return
@@ -314,14 +391,24 @@ function issue(res,page,req,r,message,extras={}){res.status(400);return render(r
    if (!eligible(r)) return redirect(res, '/' + encodeURIComponent(r.id))
    const d = draft(req, r)
    if (!d.changes.length || !d.tags.length) return redirect(res, '/' + encodeURIComponent(r.id) + '/propose')
-   if (d.tags.length === r.tags.length && d.tags.every(t => r.tags.includes(t)) && d.date === r.date) {
+   const source=reportedDates(r), owner=ownDateKey(r)
+   const cattleSame=d.tags.length===r.tags.length && d.tags.every(tag=>r.tags.includes(tag))
+   const substantiveDateChange=['off','on'].some(key=>source[key] && d[key+'Date'] && !sameDate(source[key],d[key+'Date']))
+   if (cattleSame && !substantiveDateChange) {
      return show(req, res, 'propose-check', r, {error: 'You have not made any changes to this movement'})
    }
    const note = escape(req.body.reason)
    if (!note) return show(req, res, 'propose-check', r, {error: 'Explain why you are proposing these changes'})
-   r.proposal = {date: d.date, tags: d.tags.slice(), note}
+   const originalDates=reportedDates(r)
+   // First-time dates supplied by the responsible keeper are recorded facts, not proposed changes.
+   if (!originalDates[owner] && d[owner+'Date']) {
+     r[owner+'Date']=d[owner+'Date']
+     r.reviewProvidedDate=owner
+     recordEvent(r,'Movement date provided',(owner==='on'?'Date cattle arrived: ':'Date cattle left: ')+d[owner+'Date'],'Reviewing keeper (keeper)')
+   }
+   r.proposal = {date: d.date, offDate:d.offDate, onDate:d.onDate,tags:d.tags.slice(), note}
    r.status = 'changes'
-   recordEvent(r, 'Changes proposed', note + '; proposed date: ' + d.date + '; proposed ear tags: ' + d.tags.join(', '), 'Opposing keeper (keeper)')
+   recordEvent(r, 'Changes proposed', note + '; proposed departure: ' + (d.offDate || 'Not provided') + '; proposed arrival: ' + (d.onDate || 'Not provided') + '; proposed ear tags: ' + d.tags.join(', '), 'Opposing keeper (keeper)')
    delete req.session.data.rfmProposalDrafts[r.id]
    return redirect(res, '/' + encodeURIComponent(r.id) + '/outcome')
  })
@@ -333,7 +420,7 @@ function issue(res,page,req,r,message,extras={}){res.status(400);return render(r
  router.get(ROOT+'/:id/reject',(req,res)=>{const r=must(req,res);if(r)return render(req,res,'reject',{movement:decorate(r),pageName:'Reject movement'})})
  router.post(ROOT+'/:id/reject',(req,res)=>{const r=must(req,res);if(!r)return;if(r.status!=='awaiting'||r.initiator!=='other')return redirect(res,'/'+encodeURIComponent(r.id));const reason=escape(req.body.reason);if(!reason)return issue(res,'reject',req,r,'Explain why you are rejecting the movement');r.reason=reason;r.status='rejected';recordEvent(r,'Movement rejected',reason,'Opposing keeper (keeper)');return redirect(res,'/'+encodeURIComponent(r.id)+'/outcome')})
  router.get(ROOT+'/:id/respond-changes',(req,res)=>{const r=must(req,res);if(r)return res.redirect(ROOT+'/'+encodeURIComponent(r.id)+'#movement-action')})
- router.post(ROOT+'/:id/respond-changes',(req,res)=>{const r=must(req,res);if(!r)return;if(r.status!=='changes'||r.initiator!=='you')return redirect(res,'/'+encodeURIComponent(r.id));const action=escape(req.body.decision);if(!['accept','dispute'].includes(action))return issue(res,'detail',req,r,'Select whether you accept the changes');if(action==='accept'){r.date=r.proposal.date;r.tags=r.proposal.tags.slice();r.status='confirmed';recordEvent(r,'Proposed changes accepted',r.proposal.note,'Original reporter (keeper)')}else{r.status='disputed';recordEvent(r,'Proposed changes disputed','Referred for back-office review.','Original reporter (keeper)')}return redirect(res,'/'+encodeURIComponent(r.id)+'/outcome')})
+ router.post(ROOT+'/:id/respond-changes',(req,res)=>{const r=must(req,res);if(!r)return;if(r.status!=='changes'||r.initiator!=='you')return redirect(res,'/'+encodeURIComponent(r.id));const action=escape(req.body.decision);if(!['accept','dispute'].includes(action))return issue(res,'detail',req,r,'Select whether you accept the changes');if(action==='accept'){r.date=r.proposal.date;r.offDate=r.proposal.offDate || r.offDate;r.onDate=r.proposal.onDate || r.onDate;r.tags=r.proposal.tags.slice();r.status='confirmed';recordEvent(r,'Proposed changes accepted',r.proposal.note,'Original reporter (keeper)')}else{r.status='disputed';recordEvent(r,'Proposed changes disputed','Referred for back-office review.','Original reporter (keeper)')}return redirect(res,'/'+encodeURIComponent(r.id)+'/outcome')})
  router.get(ROOT+'/:id/respond-rejection',(req,res)=>{const r=must(req,res);if(r)return res.redirect(ROOT+'/'+encodeURIComponent(r.id)+'#movement-action')})
  router.post(ROOT+'/:id/respond-rejection',(req,res)=>{const r=must(req,res);if(!r)return;if(r.status!=='rejected'||r.initiator!=='you')return redirect(res,'/'+encodeURIComponent(r.id));const action=escape(req.body.decision);if(!['correct','withdraw','dispute'].includes(action))return issue(res,'detail',req,r,'Select how you want to respond');if(action==='correct')return redirect(res,'/'+encodeURIComponent(r.id)+'/correct');if(action==='withdraw'){r.status='withdrawn';recordEvent(r,'Movement report withdrawn','Original declaration retained in audit history.','Original reporter (keeper)')}else{r.status='disputed';recordEvent(r,'Movement rejection disputed','Referred for back-office review.','Original reporter (keeper)')}return redirect(res,'/'+encodeURIComponent(r.id)+'/outcome')})
  router.get(ROOT+'/:id/correct',(req,res)=>{const r=must(req,res);if(r)return render(req,res,'correct',{movement:decorate(r),pageName:'Correct movement'})})

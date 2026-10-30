@@ -1,0 +1,41 @@
+{% extends "layouts/main.html" %}
+{% set pageName = "Confirm movement date" %}
+{% block beforeContent %}<a class="govuk-back-link" href="{{ root }}/{{ movement.id }}{% if action == 'propose' %}/propose{% endif %}">Back</a>{% endblock %}
+{% block content %}
+<div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
+  <span class="govuk-caption-l">Movement {{ movement.id }}</span>
+  <h1 class="govuk-heading-l">Before you {% if action == 'confirm' %}confirm this movement{% else %}propose changes{% endif %}</h1>
+  <p class="govuk-body">You will need to confirm the date the cattle {% if ownDateKey == 'on' %}arrived on{% else %}left{% endif %} your holding. This helps us complete the movement record.</p>
+  {% if error %}<div class="govuk-error-summary" role="alert"><h2 class="govuk-error-summary__title">There is a problem</h2><div class="govuk-error-summary__body"><p>{{ error }}</p></div></div>{% endif %}
+  <form method="post" action="{{ root }}/{{ movement.id }}/{% if action == 'confirm' %}confirm-date{% else %}propose/own-date{% endif %}" novalidate>
+    <div class="govuk-form-group{% if error %} govuk-form-group--error{% endif %}">
+      <fieldset class="govuk-fieldset">
+        <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
+          {% if knownDate %}Did the cattle {% if ownDateKey == 'on' %}arrive at{% else %}leave{% endif %} your holding on {{ knownDate }}?
+          {% elif referenceDate %}Did the cattle {% if ownDateKey == 'on' %}arrive at{% else %}leave{% endif %} your holding on {{ referenceDate }}?
+          {% else %}When did the cattle {% if ownDateKey == 'on' %}arrive at{% else %}leave{% endif %} your holding?{% endif %}
+        </legend>
+        {% if knownDate or referenceDate %}
+        <div class="govuk-radios" data-module="govuk-radios">
+          <div class="govuk-radios__item"><input class="govuk-radios__input" id="date-yes" name="date-choice" type="radio" value="{% if knownDate %}existing{% else %}yes{% endif %}"><label class="govuk-label govuk-radios__label" for="date-yes">Yes</label></div>
+          <div class="govuk-radios__item"><input class="govuk-radios__input" id="date-no" name="date-choice" type="radio" value="no" data-aria-controls="date-fields"><label class="govuk-label govuk-radios__label" for="date-no">No, a different date</label></div>
+          <div class="govuk-radios__conditional govuk-radios__conditional--hidden" id="date-fields">
+        {% else %}
+          <input type="hidden" name="date-choice" value="enter">
+        {% endif %}
+          <div class="govuk-form-group"><fieldset class="govuk-fieldset" role="group" aria-describedby="date-hint">
+            <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">Enter the date cattle {% if ownDateKey == 'on' %}arrived{% else %}left{% endif %}</legend>
+            <div id="date-hint" class="govuk-hint">For example, 28 10 2026</div>
+            <div class="govuk-date-input">
+            {% for field, width in [['day','2'],['month','2'],['year','4']] %}
+              <div class="govuk-date-input__item"><div class="govuk-form-group"><label class="govuk-label govuk-date-input__label" for="{{ field }}">{{ field | capitalize }}</label><input class="govuk-input govuk-date-input__input govuk-input--width-{{ width }}" id="{{ field }}" name="{{ field }}" inputmode="numeric"></div></div>
+            {% endfor %}
+            </div>
+          </fieldset></div>
+        {% if knownDate or referenceDate %}</div></div>{% endif %}
+      </fieldset>
+    </div>
+    <button class="govuk-button" type="submit">Continue</button>
+  </form>
+</div></div>
+{% endblock %}

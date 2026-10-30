@@ -10,7 +10,9 @@
   <p class="govuk-body">This is the movement as you propose it should be recorded. The original report will be kept until the reporting keeper accepts or disputes your changes.</p>
   {% if error %}<p class="govuk-error-message"><span class="govuk-visually-hidden">Error:</span> {{ error }}</p>{% endif %}
   <dl class="govuk-summary-list">
-    <div class="govuk-summary-list__row"><dt class="govuk-summary-list__key">Movement date</dt><dd class="govuk-summary-list__value">{{ draft.date }}</dd><dd class="govuk-summary-list__actions">{% if dateSelected %}<a class="govuk-link" href="{{ root }}/{{ movement.id }}/propose/date">Change<span class="govuk-visually-hidden"> movement date</span></a>{% endif %}</dd></div>
+    {% for item in [{'key':'off','label':'Date cattle left','value':draft.offDate},{'key':'on','label':'Date cattle arrived','value':draft.onDate}] %}
+    <div class="govuk-summary-list__row"><dt class="govuk-summary-list__key">{{ item.label }}</dt><dd class="govuk-summary-list__value">{{ item.value or 'Not provided' }}</dd><dd class="govuk-summary-list__actions">{% if dateSelected %}<a class="govuk-link" href="{{ root }}/{{ movement.id }}/propose/date">Change<span class="govuk-visually-hidden"> {{ item.label }}</span></a>{% endif %}</dd></div>
+    {% endfor %}
     <div class="govuk-summary-list__row"><dt class="govuk-summary-list__key">Number of cattle</dt><dd class="govuk-summary-list__value">{{ proposedAnimals | length }}</dd><dd class="govuk-summary-list__actions">{% if animalsSelected %}<a class="govuk-link" href="{{ root }}/{{ movement.id }}/propose/animals">Change<span class="govuk-visually-hidden"> cattle</span></a>{% endif %}</dd></div>
   </dl>
   <h2 class="govuk-heading-m">Cattle in the proposed movement</h2>
