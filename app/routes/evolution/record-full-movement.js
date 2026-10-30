@@ -57,6 +57,15 @@ function render (req, res, page, extras = {}, status = 200) {
   return res.status(status).render(VIEW + page, { base: BASE, draft: data(req), sender: SENDER, isOn: data(req).direction === 'on', ...extras })
 }
 function invalid (req, res, page, errors, extras) { return render(req, res, page, { errors, ...(extras || {}) }, 400) }
+// An abattoir can receive cattle but cannot be the sending location for an ON report.
+function prohibitedSendingLocation (d) {
+  return d.direction === 'on' && (d.destinationType === 'slaughterhouse' ||
+    (getDestination(d) && getDestination(d).type === 'slaughterhouse'))
+}
+function permittedPrevious (d) {
+  return PREVIOUS_IDS.map(id => DESTINATIONS.find(x => x.id === id))
+    .filter(x => x && !(d.direction === 'on' && x.type === 'slaughterhouse')).slice(0, 10)
+}
 function getDestination (d) {
   return (d.destinationType === 'other' && d.otherDestination) ||
     DESTINATIONS.find(x => x.id === d.destinationId && x.type === d.destinationType) || null
@@ -106,13 +115,14 @@ function requireOtherDate (req, res) {
 }
 function requireDestination (req, res) {
   if (data(req).direction !== 'on' && !requireDate(req, res)) return false
+  if (prohibitedSendingLocation(data(req))) { go(res, '/destination-type'); return false }
   if (!getDestination(data(req))) { go(res, '/previous-destinations'); return false }
   return true
 }
 function requireType (req, res) {
   if (data(req).direction === 'on') { if (!data(req).direction) { go(res, '/movement-type'); return false } }
   else if (!requireDate(req, res)) return false
-  if (!TYPES.includes(data(req).destinationType)) { go(res, '/destination-type'); return false }
+  if (!TYPES.includes(data(req).destinationType) || prohibitedSendingLocation(data(req))) { go(res, '/destination-type'); return false }
   return true
 }
 // Compare with today's calendar date in the UK, regardless of server timezone.
@@ -349,12 +359,12 @@ function saveDate (d, parts, option) {
 
   router.get(`${BASE}/previous-destinations`, (req, res) => {
     if (data(req).direction !== 'on' && !requireDate(req, res)) return
-    return render(req, res, 'previous-destinations', { previousDestinations: PREVIOUS_IDS.map(id => DESTINATIONS.find(x => x.id === id)).filter(Boolean).slice(0, 10) })
+    return render(req, res, 'previous-destinations', { previousDestinations: permittedPrevious(data(req)) })
   })
   router.post(`${BASE}/previous-destinations`, (req, res) => {
     if (data(req).direction !== 'on' && !requireDate(req, res)) return
-    const id = strip(req.body['rfm-previous']), previous = PREVIOUS_IDS.map(k => DESTINATIONS.find(x => x.id === k)).find(x => x && x.id === id)
-    if (id !== 'new' && !previous) return invalid(req, res, 'previous-destinations', [err('previous-error', 'Select a destination')], { previousDestinations: PREVIOUS_IDS.map(k => DESTINATIONS.find(x => x.id === k)) })
+    const id = strip(req.body['rfm-previous']), previous = permittedPrevious(data(req)).find(x => x.id === id)
+    if (id !== 'new' && !previous) return invalid(req, res, 'previous-destinations', [err('previous-error', 'Select a destination')], { previousDestinations: permittedPrevious(data(req)) })
     const d = data(req); clearDestination(d)
     if (id === 'new') return go(res, '/destination-type')
     d.destinationType = previous.type; d.destinationId = previous.id
@@ -367,6 +377,7 @@ function saveDate (d, parts, option) {
   router.post(`${BASE}/destination-type`, (req, res) => {
     if (data(req).direction !== 'on' && !requireDate(req, res)) return
     const type = strip(req.body['rfm-destination-type'])
+    if (data(req).direction === 'on' && type === 'slaughterhouse') return invalid(req, res, 'destination-type', [err('destination-type-error', 'Cattle cannot move from an abattoir. Select a different sending location')])
     if (!TYPES.includes(type)) return invalid(req, res, 'destination-type', [err('destination-type-error', 'Select the type of destination')])
     const d = data(req); clearDestination(d); d.destinationType = type
     return go(res, type === 'other' ? '/destination-other' : '/find-method')

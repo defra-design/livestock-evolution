@@ -198,11 +198,7 @@
     <p class="govuk-body">No changes to the cattle in this movement.</p>
   {% endif %}
 {% endif %}
-{% if error %}
-  <p class="govuk-error-message">
-    <span class="govuk-visually-hidden">Error:</span> {{ error }}
-  </p>
-{% endif %}
+
 {% if movement.canReview %}
 <form method="post" action="{{ root }}/{{ movement.id }}/review" novalidate>
 {{ govukRadios({
