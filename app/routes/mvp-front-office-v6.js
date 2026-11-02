@@ -32,6 +32,7 @@ function getErrorRecords() {
     },
     {
       id: '6780-5907',
+      hidden: true,
       earTagNumber: 'UK324537467887',
       date: '12-08-2025',
       dateOfBirth: '29-07-2025',
@@ -561,7 +562,7 @@ router.post('/mvp-front-office/v6/my-holdings/export-animals', (req, res) => {
 router.get('/mvp-front-office/v6/my-holdings/cattle-error-records', (req, res) => {
   const holding = getSelectedHolding(req)
 
-  const errorRecords = getErrorRecords().map((record) => ({
+  const errorRecords = getErrorRecords().filter((record) => !record.hidden).map((record) => ({
     ...record,
     referenceNumber: record.id
   }))
