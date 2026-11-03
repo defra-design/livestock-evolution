@@ -1,0 +1,7 @@
+{% extends "layouts/main.html" %}
+{% set pageName = "Abattoir movements" %}
+{% block content %}
+<div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
+<h1 class="govuk-heading-l">Movements to {{ abattoir.name }}</h1><p class="govuk-body">Review cattle arriving at your abattoir and report deaths separately.</p><table class="govuk-table"><thead class="govuk-table__head"><tr><th class="govuk-table__header">Reference</th><th class="govuk-table__header">From</th><th class="govuk-table__header">Cattle</th><th class="govuk-table__header">Movement status</th></tr></thead><tbody class="govuk-table__body">{% for movement in movements %}<tr><td class="govuk-table__cell"><a class="govuk-link" href="{{ root }}/{{ movement.id }}">{{ movement.id }}</a></td><td class="govuk-table__cell">{{ movement.from }}</td><td class="govuk-table__cell">{{ movement.tags.length }}</td><td class="govuk-table__cell">{% if movement.movementStatus == 'confirmed' %}Confirmed{% else %}Awaiting confirmation{% endif %}</td></tr>{% endfor %}</tbody></table>
+</div></div>
+{% endblock %}
