@@ -1,32 +1,57 @@
 {% extends "layouts/main.html" %}
-{% set pageName = "Change movement dates" %}
-{% block beforeContent %}<a class="govuk-back-link" href="{{ root }}/{{ movement.id }}/propose">Back</a>{% endblock %}
+{% set pageName = "Amend movement date" %}
+{% block beforeContent %}
+  <a class="govuk-back-link" href="{{ root }}/{{ movement.id }}{% if dateKey == 'on' and dateKeys[0] == 'off' %}/propose/date/off{% elif animalsSelected %}/propose/animals{% else %}/propose{% endif %}">Back</a>
+{% endblock %}
 {% block content %}
-<div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
-  <span class="govuk-caption-l">Movement {{ movement.id }}</span>
-  <h1 class="govuk-heading-l">Change movement dates</h1>
-  <p class="govuk-body">You can change either date or both. Only dates that are changed will be proposed to the reporting keeper.</p>
-  {% if error %}<div class="govuk-error-summary" role="alert"><h2 class="govuk-error-summary__title">There is a problem</h2><div class="govuk-error-summary__body"><p>{{ error }}</p></div></div>{% endif %}
-  <form method="post" action="{{ root }}/{{ movement.id }}/propose/date" novalidate>
-  {% for item in [{'key':'off','label':'Date cattle left','value':draft.offDate},{'key':'on','label':'Date cattle arrived','value':draft.onDate}] %}
-    <fieldset class="govuk-fieldset govuk-!-margin-bottom-7">
-      <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">{{ item.label }}</legend>
-      <p class="govuk-body">{% if item.value %}Currently recorded: <strong>{{ item.value }}</strong>{% else %}Not provided{% endif %}</p>
-      <div class="govuk-radios" data-module="govuk-radios">
-        {% if item.value %}<div class="govuk-radios__item"><input class="govuk-radios__input" type="radio" name="{{ item.key }}-choice" id="{{ item.key }}-keep" value="keep" checked><label class="govuk-label govuk-radios__label" for="{{ item.key }}-keep">Keep this date</label></div>{% else %}<div class="govuk-radios__item"><input class="govuk-radios__input" type="radio" name="{{ item.key }}-choice" id="{{ item.key }}-unknown" value="unknown" checked><label class="govuk-label govuk-radios__label" for="{{ item.key }}-unknown">Not provided</label></div>{% endif %}
-        <div class="govuk-radios__item"><input class="govuk-radios__input" type="radio" name="{{ item.key }}-choice" id="{{ item.key }}-change" value="change" data-aria-controls="{{ item.key }}-fields"><label class="govuk-label govuk-radios__label" for="{{ item.key }}-change">{% if item.value %}Change this date{% else %}Enter this date{% endif %}</label></div>
-        <div class="govuk-radios__conditional govuk-radios__conditional--hidden" id="{{ item.key }}-fields">
-          <div class="govuk-date-input">
-            {% for field, width in [['day','2'],['month','2'],['year','4']] %}
-            <div class="govuk-date-input__item"><div class="govuk-form-group"><label class="govuk-label govuk-date-input__label" for="{{ item.key }}-{{ field }}">{{ field | capitalize }}</label><input class="govuk-input govuk-date-input__input govuk-input--width-{{ width }}" id="{{ item.key }}-{{ field }}" name="{{ item.key }}-{{ field }}" inputmode="numeric"></div></div>
-            {% endfor %}
-          </div>
-        </div>
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    <span class="govuk-caption-l">Movement {{ movement.id }}</span>
+    {% if error %}
+      <div class="govuk-error-summary" role="alert">
+        <h2 class="govuk-error-summary__title">There is a problem</h2>
+        <div class="govuk-error-summary__body"><p>{{ error }}</p></div>
       </div>
-    </fieldset>
-  {% endfor %}
-  <button class="govuk-button" type="submit">Save and continue</button>
-  </form>
-  <p class="govuk-body"><a class="govuk-link" href="{{ root }}/{{ movement.id }}/propose/cancel">Cancel amendments</a></p>
-</div></div>
+    {% endif %}
+    <form action="{{ root }}/{{ movement.id }}/propose/date/{{ dateKey }}" method="post" novalidate>
+      <div class="govuk-form-group{% if error %} govuk-form-group--error{% endif %}">
+        <fieldset class="govuk-fieldset" aria-describedby="recorded-date">
+          <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+            <h1 class="govuk-fieldset__heading">Do you want to change the {{ dateLabel }}?</h1>
+          </legend>
+          <p class="govuk-body" id="recorded-date">Currently recorded: <strong>{{ currentDate or 'Not provided' }}</strong></p>
+          {% if error %}<p class="govuk-error-message"><span class="govuk-visually-hidden">Error:</span> {{ error }}</p>{% endif %}
+          <div class="govuk-radios" data-module="govuk-radios">
+            <div class="govuk-radios__item">
+              <input class="govuk-radios__input" id="change-yes" name="date-choice" type="radio" value="change" data-aria-controls="changed-date"{% if dateChoice == 'change' %} checked{% endif %}>
+              <label class="govuk-label govuk-radios__label" for="change-yes">Yes</label>
+            </div>
+            <div class="govuk-radios__conditional govuk-radios__conditional--hidden" id="changed-date">
+              <fieldset class="govuk-fieldset" role="group" aria-describedby="new-date-hint">
+                <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">Enter the new date</legend>
+                <div class="govuk-hint" id="new-date-hint">For example, 28 10 2026</div>
+                <div class="govuk-date-input">
+                  {% for field, width in [['day','2'],['month','2'],['year','4']] %}
+                    <div class="govuk-date-input__item">
+                      <div class="govuk-form-group">
+                        <label class="govuk-label govuk-date-input__label" for="{{ field }}">{{ field | capitalize }}</label>
+                        <input class="govuk-input govuk-date-input__input govuk-input--width-{{ width }}" id="{{ field }}" name="{{ field }}" inputmode="numeric">
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </fieldset>
+            </div>
+            <div class="govuk-radios__item">
+              <input class="govuk-radios__input" id="change-no" name="date-choice" type="radio" value="keep"{% if dateChoice == 'keep' %} checked{% endif %}>
+              <label class="govuk-label govuk-radios__label" for="change-no">No, keep it the same</label>
+            </div>
+          </div>
+        </fieldset>
+      </div>
+      <button class="govuk-button" type="submit">Continue</button>
+    </form>
+    <p class="govuk-body"><a class="govuk-link" href="{{ root }}/{{ movement.id }}/propose/cancel">Cancel amendments</a></p>
+  </div>
+</div>
 {% endblock %}

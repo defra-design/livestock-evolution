@@ -157,7 +157,7 @@ function issue(res,page,req,r,message,extras={}){res.status(400);return render(r
    if (dates[k] && !sameDate(dates[k],value)) {
      const d=draft(req,r,true)
      d.changes=['date'];d[k+'Date']=value
-     return redirect(res,'/'+encodeURIComponent(r.id)+'/propose/check')
+     return redirect(res,'/'+encodeURIComponent(r.id)+'/propose/reason')
    }
    if (!dates[k]) { r[k+'Date']=value; r.reviewProvidedDate=k; recordEvent(r,'Movement date provided',(k==='on'?'Date cattle arrived: ':'Date cattle left: ')+value,'Reviewing keeper (keeper)') }
    r.status='confirmed'
@@ -178,7 +178,9 @@ function issue(res,page,req,r,message,extras={}){res.status(400);return render(r
    else if(choice==='no' || choice==='enter') value=parseDateFields(req.body)
    if(!value)return datePage(req,res,r,'propose','Select an answer and enter a valid date if needed')
    d[k+'Date']=value
-   return redirect(res,'/'+encodeURIComponent(r.id)+(d.changes.includes('animals')?'/propose/animals':'/propose/date'))
+    d.reviewOwnDateProvided=true
+    // This first-time date is information supplied by the reviewing keeper, not a proposal.
+    return redirect(res,'/'+encodeURIComponent(r.id)+'/propose')
  })
  // Draft proposal journey. Draft data is distinct from the recorded movement and its audit history.
  function eligible(r) { return r.status === 'awaiting' && r.initiator === 'other' }
@@ -195,21 +197,37 @@ function issue(res,page,req,r,message,extras={}){res.status(400);return render(r
      dateSelected: d.changes.includes('date'),
      animalsSelected: d.changes.includes('animals'),
      ownDateKey: ownDateKey(r),
+     dateKeys: dateKeysForProposal(r),
+     lastDateKey: dateKeysForProposal(r).slice(-1)[0],
+     dateOptionLabel: dateKeysForProposal(r).length === 2 ? 'Movement dates' : (dateKeysForProposal(r)[0] === 'off' ? 'Date cattle left the holding' : 'Date cattle arrived at the holding'),
      newTags: d.newTags || [],
      failures: d.failures || [],
      failureCount: (d.failures || []).length,
      ...extras
    })
  }
- function stage(req, res, r, page) {
+ function dateKeysForProposal(r) {
+    // When the keeper has just provided their missing date, offer only the other date to amend.
+    const dates=reportedDates(r), own=ownDateKey(r), other=otherDateKey(own)
+    return dates[own] && dates[other] ? ['off','on'] : [other]
+  }
+  function nextAfterAnimals(r,d) {
+    return d.changes.includes('date') ? '/propose/date/' + dateKeysForProposal(r)[0] : '/propose/reason'
+  }
+  function stage(req, res, r, page) {
    if (!eligible(r)) return redirect(res, '/' + encodeURIComponent(r.id))
    return show(req, res, page, r)
  }
  router.get(ROOT + '/:id/propose', (req, res) => {
    const r = must(req, res); if (!r) return
    if (!eligible(r)) return redirect(res, '/' + encodeURIComponent(r.id))
-   // GET does not reset a draft, enabling normal back navigation.
-   return stage(req, res, r, 'propose')
+   // Ask for the keeper's own date BEFORE choosing which details to amend.
+    // A completed draft answer allows normal back navigation without asking again.
+    const d=draft(req,r)
+    if (!reportedDates(r)[ownDateKey(r)] && !d.reviewOwnDateProvided) {
+      return redirect(res, '/' + encodeURIComponent(r.id) + '/propose/own-date')
+    }
+    return stage(req, res, r, 'propose')
  })
  router.post(ROOT + '/:id/propose/choose', (req, res) => {
    const r = must(req, res); if (!r) return
@@ -218,7 +236,7 @@ function issue(res,page,req,r,message,extras={}){res.status(400);return render(r
    if (!values.length) return show(req, res, 'propose', r, {error: 'Select what you want to change'})
    const d = draft(req, r)
    d.changes = [...new Set(values)]
-   return redirect(res, '/' + encodeURIComponent(r.id) + (!reportedDates(r)[ownDateKey(r)] ? '/propose/own-date' : (d.changes.includes('animals') ? '/propose/animals' : '/propose/date')))
+   return redirect(res, '/' + encodeURIComponent(r.id) + (d.changes.includes('animals') ? '/propose/animals' : '/propose/date/' + dateKeysForProposal(r)[0]))
  })
  router.get(ROOT + '/:id/propose/animals', (req, res) => {
    const r = must(req, res); if (!r) return
@@ -355,30 +373,59 @@ function issue(res,page,req,r,message,extras={}){res.status(400);return render(r
    if (!d.tags.length) return show(req,res,'propose-animals',r,{error:'The proposed movement must include at least one animal'})
    if (!d.changes.includes('date') && d.tags.length === r.tags.length && d.tags.every(tag => r.tags.includes(tag))) return show(req,res,'propose-animals',r,{error:'You have not made any changes to the cattle in this movement'})
    delete d.pending
-   return redirect(res, '/' + encodeURIComponent(r.id) + (d.changes.includes('date') ? '/propose/date' : '/propose/check'))
+   return redirect(res, '/' + encodeURIComponent(r.id) + nextAfterAnimals(r,d))
  })
- router.get(ROOT + '/:id/propose/date', (req, res) => {
-   const r = must(req,res); if (!r) return
-   if (!eligible(r)) return redirect(res,'/'+encodeURIComponent(r.id))
-   const d = draft(req,r)
-   if (!d.changes.includes('date')) return redirect(res,'/'+encodeURIComponent(r.id)+'/propose')
-   return show(req,res,'propose-date',r)
- })
- router.post(ROOT + '/:id/propose/date', (req,res) => {
-   const r=must(req,res); if (!r) return
-   if (!eligible(r)) return redirect(res,'/'+encodeURIComponent(r.id))
-   const d=draft(req,r)
-   for (const key of ['off','on']) {
-     const choice=escape(req.body[key+'-choice'])
-     if (choice === 'keep') { d[key+'Date']=d[key+'Date'] || reportedDates(r)[key]; continue }
-     if (choice === 'unknown' && !reportedDates(r)[key]) { d[key+'Date']=null; continue }
-     if (choice !== 'change') return show(req,res,'propose-date',r,{error:'Select whether to change each movement date'})
-     const date=parseDateFields(req.body,key+'-')
-     if (!date) return show(req,res,'propose-date',r,{error:'Enter a real '+(key==='off'?'departure':'arrival')+' date that is not in the future'})
-     d[key+'Date']=date
-   }
-   return redirect(res,'/'+encodeURIComponent(r.id)+'/propose/check')
- })
+ // Each date amendment is a separate GOV.UK question page.
+  function showProposeDate(req,res,r,key,extras={}) {
+    const d=draft(req,r)
+    return show(req,res,'propose-date',r,{
+      dateKey:key,
+      dateLabel:key==='off'?'date the cattle left the holding':'date the cattle arrived at the holding',
+      currentDate:reportedDates(r)[key],
+      dateChoice: d.dateChoices && d.dateChoices[key],
+      ...extras
+    })
+  }
+  router.get(ROOT + '/:id/propose/date', (req,res) => {
+    const r=must(req,res); if (!r)return
+    return redirect(res,'/'+encodeURIComponent(r.id)+'/propose/date/'+dateKeysForProposal(r)[0])
+  })
+  router.get(ROOT + '/:id/propose/date/:key', (req,res) => {
+    const r=must(req,res);if(!r)return
+    const d=draft(req,r),key=req.params.key
+    if(!eligible(r)||!d.changes.includes('date')||!dateKeysForProposal(r).includes(key))return redirect(res,'/'+encodeURIComponent(r.id)+'/propose')
+    return showProposeDate(req,res,r,key)
+  })
+  router.post(ROOT + '/:id/propose/date/:key', (req,res) => {
+    const r=must(req,res);if(!r)return
+    const d=draft(req,r),key=req.params.key,keys=dateKeysForProposal(r)
+    if(!eligible(r)||!d.changes.includes('date')||!keys.includes(key))return redirect(res,'/'+encodeURIComponent(r.id)+'/propose')
+    const choice=escape(req.body['date-choice'])
+    d.dateChoices=d.dateChoices || {}
+    d.dateChoices[key]=choice
+    if(choice==='keep') d[key+'Date']=reportedDates(r)[key]
+    else if(choice==='change') {
+      const value=parseDateFields(req.body)
+      if(!value)return showProposeDate(req,res,r,key,{error:'Enter a real date that is not in the future'})
+      d[key+'Date']=value
+    } else return showProposeDate(req,res,r,key,{error:'Select whether you want to change this date'})
+    const next=keys.indexOf(key)+1
+    return redirect(res,'/'+encodeURIComponent(r.id)+(next<keys.length?'/propose/date/'+keys[next]:'/propose/reason'))
+  })
+  // The explanation is collected on its own page, before Check your answers.
+  router.get(ROOT + '/:id/propose/reason',(req,res)=>{
+    const r=must(req,res);if(!r)return
+    if(!eligible(r))return redirect(res,'/'+encodeURIComponent(r.id))
+    return show(req,res,'propose-reason',r)
+  })
+  router.post(ROOT + '/:id/propose/reason',(req,res)=>{
+    const r=must(req,res);if(!r)return
+    if(!eligible(r))return redirect(res,'/'+encodeURIComponent(r.id))
+    const reason=escape(req.body.reason)
+    if(!reason)return show(req,res,'propose-reason',r,{error:'Provide a brief description of why you are proposing amendments'})
+    draft(req,r).note=reason
+    return redirect(res,'/'+encodeURIComponent(r.id)+'/propose/check')
+  })
  router.get(ROOT + '/:id/propose/check', (req, res) => {
    const r = must(req, res); if (!r) return
    if (!eligible(r)) return redirect(res, '/' + encodeURIComponent(r.id))
@@ -397,8 +444,8 @@ function issue(res,page,req,r,message,extras={}){res.status(400);return render(r
    if (cattleSame && !substantiveDateChange) {
      return show(req, res, 'propose-check', r, {error: 'You have not made any changes to this movement'})
    }
-   const note = escape(req.body.reason)
-   if (!note) return show(req, res, 'propose-check', r, {error: 'Explain why you are proposing these changes'})
+   const note = escape(d.note)
+    if (!note) return redirect(res, '/' + encodeURIComponent(r.id) + '/propose/reason')
    const originalDates=reportedDates(r)
    // First-time dates supplied by the responsible keeper are recorded facts, not proposed changes.
    if (!originalDates[owner] && d[owner+'Date']) {

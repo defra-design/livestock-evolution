@@ -1,6 +1,6 @@
 {% extends "layouts/main.html" %}
 {% set pageName = "Confirm movement date" %}
-{% block beforeContent %}<a class="govuk-back-link" href="{{ root }}/{{ movement.id }}{% if action == 'propose' %}/propose{% endif %}">Back</a>{% endblock %}
+{% block beforeContent %}<a class="govuk-back-link" href="{{ root }}/{{ movement.id }}">Back</a>{% endblock %}
 {% block content %}
 <div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
   <span class="govuk-caption-l">Movement {{ movement.id }}</span>

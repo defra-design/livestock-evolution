@@ -9,7 +9,7 @@
   <div class="govuk-grid-column-two-thirds">
     <span class="govuk-caption-l">Movement {{ movement.id }}</span>
     <h1 class="govuk-heading-l">What do you want to change?</h1>
-    <p class="govuk-body">You can propose changes to the cattle or movement dates. The original report will not change unless the reporting keeper accepts your proposal.</p>
+    <p class="govuk-body">Select what needs correcting in the reported movement. The original report will not change unless the reporting keeper accepts the amendments.</p>
     {% if error %}<p class="govuk-error-message"><span class="govuk-visually-hidden">Error:</span> {{ error }}</p>{% endif %}
     <form method="post" action="{{ root }}/{{ movement.id }}/propose/choose">
       {{ govukCheckboxes({
@@ -28,7 +28,7 @@
           },
           {
             value: "date",
-            text: "Movement dates",
+            text: dateOptionLabel,
             checked: dateSelected
           }
         ]

@@ -1,0 +1,30 @@
+{% extends "layouts/main.html" %}
+{% set pageName = "Explain proposed amendments" %}
+{% block beforeContent %}
+  <a class="govuk-back-link" href="{{ root }}/{{ movement.id }}{% if dateSelected %}/propose/date/{{ lastDateKey }}{% elif animalsSelected %}/propose/animals{% else %}/propose{% endif %}">Back</a>
+{% endblock %}
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    <span class="govuk-caption-l">Movement {{ movement.id }}</span>
+    {% if error %}
+      <div class="govuk-error-summary" role="alert">
+        <h2 class="govuk-error-summary__title">There is a problem</h2>
+        <div class="govuk-error-summary__body"><a href="#reason">{{ error }}</a></div>
+      </div>
+    {% endif %}
+    <form action="{{ root }}/{{ movement.id }}/propose/reason" method="post" novalidate>
+      <div class="govuk-form-group{% if error %} govuk-form-group--error{% endif %}">
+        <h1 class="govuk-label-wrapper">
+          <label class="govuk-label govuk-label--l" for="reason">Provide a brief description of why you are proposing amendments</label>
+        </h1>
+        <div class="govuk-hint" id="reason-hint">For example, one of the cattle listed in the movement did not arrive at your holding.</div>
+        {% if error %}<p class="govuk-error-message"><span class="govuk-visually-hidden">Error:</span> {{ error }}</p>{% endif %}
+        <textarea class="govuk-textarea{% if error %} govuk-textarea--error{% endif %}" id="reason" name="reason" rows="5" aria-describedby="reason-hint">{{ draft.note or '' }}</textarea>
+      </div>
+      <button class="govuk-button" type="submit">Continue</button>
+    </form>
+    <p class="govuk-body"><a class="govuk-link" href="{{ root }}/{{ movement.id }}/propose/cancel">Cancel amendments</a></p>
+  </div>
+</div>
+{% endblock %}
