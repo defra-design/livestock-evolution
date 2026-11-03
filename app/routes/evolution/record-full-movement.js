@@ -117,6 +117,7 @@ function requireDestination (req, res) {
   if (data(req).direction !== 'on' && !requireDate(req, res)) return false
   if (prohibitedSendingLocation(data(req))) { go(res, '/destination-type'); return false }
   if (!getDestination(data(req))) { go(res, '/previous-destinations'); return false }
+  if (data(req).destinationType === 'other' && !data(req).otherDestination.address) { go(res, '/destination-address'); return false }
   return true
 }
 function requireType (req, res) {
@@ -184,20 +185,25 @@ function animalPageData (d) {
 }
 function clearRecent (d) { d.lastBatch = []; d.lastBatchIsAdditional = false; d.lastFailures = [] }
 
-function listMatches (d) { return DESTINATIONS.filter(x => x.type === d.destinationType) }
+function listMatches (d) { return DESTINATIONS.filter(x => d.destinationType === 'other' || x.type === d.destinationType) }
 function searchDestinations (d, query) {
   const words = strip(query).toLowerCase().split(/\s+/).filter(Boolean)
   return words.length ? listMatches(d).filter(x => words.every(word => (x.address + ' ' + x.name + ' ' + x.identifier).toLowerCase().includes(word))) : []
 }
 function selectDestination (d, destination) {
-  d.destinationId = destination.id
+  if (d.destinationType === 'other' && d.otherDestination) {
+    // The postcode search supplies the address, not the destination's type or identifier.
+    d.otherDestination.address = destination.address
+  } else {
+    d.destinationId = destination.id
+  }
   d.confirmedDestination = false
   d.confirmation = null
 }
 function confirmationBack (d) {
+  if (d.destinationType === 'other') return '/destination-address'
   if (d.findMethod === 'address') return '/destination-address?q=' + enc(d.addressSearch)
   if (d.findMethod === 'identifier') return '/destination'
-  if (d.destinationType === 'other') return '/destination-other'
   return '/previous-destinations'
 }
 function clearDestination (d) {
@@ -464,12 +470,26 @@ function saveDate (d, parts, option) {
   })
   router.post(`${BASE}/destination-other`, (req, res) => {
     if (!requireType(req, res)) return
-    const posted = { name: strip(req.body['rfm-other-name']), identifier: strip(req.body['rfm-other-id']), address: strip(req.body['rfm-other-address']) }
-    if (!posted.name || !posted.identifier || !posted.address) return invalid(req, res, 'destination-other', [err('other-details-error', 'Enter the name, identifier and address')], { posted })
+    const posted = {
+      name: strip(req.body['rfm-other-name']),
+      identifier: strip(req.body['rfm-other-id'])
+    }
+    if (!posted.name) {
+      return invalid(req, res, 'destination-other', [
+        err('other-name-error', 'Enter the type of destination')
+      ], { posted })
+    }
     const d = data(req)
-    d.otherDestination = { id: 'other', type: 'other', idLabel: 'Destination identifier', ...posted }
-    d.confirmedDestination = false; d.confirmation = null
-    return go(res, '/confirm-destination')
+    const previous = d.otherDestination || {}
+    d.otherDestination = {
+      id: 'other', type: 'other', idLabel: 'Destination identifier',
+      ...posted,
+      address: previous.name === posted.name && previous.identifier === posted.identifier ? previous.address : ''
+    }
+    d.findMethod = 'address'
+    d.confirmedDestination = false
+    d.confirmation = null
+    return go(res, '/destination-address')
   })
   router.get(`${BASE}/confirm-destination`, (req, res) => {
     if (!requireDestination(req, res)) return
