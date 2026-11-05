@@ -100,8 +100,6 @@
                 Animal {{ loop.index }}{% if earTags.length > 1 %} of {{ earTags.length }}{% endif %}
               </legend>
               <div class="moj-add-another__item-container">
-                {{"data['movement-type']= "  + data['movement-type'] }} <br>
-                {{"isOffMovement= " +  isOffMovement }}
                 <div class="govuk-form-group {% if tagError %}govuk-form-group--error{% endif %}">
                   <label class="govuk-label" for="movement-ear-tags-{{ index }}">
                     Ear tag number
