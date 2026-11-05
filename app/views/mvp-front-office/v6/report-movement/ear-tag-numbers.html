@@ -9,8 +9,9 @@
 
 {% set pageName="Movement details" %}
 {% set serviceName = "View and report livestock information" %}
-
-{% set isOffMovement = data['movement-type'] == 'off' %}
+{% if data['movement-type'] == 'off' %}
+{% set isOffMovement = 'true'  %}
+{% endif %}
 
 {% set earTags = data['movement-ear-tags'] %}
 {% if earTags is string %}
@@ -99,7 +100,8 @@
                 Animal {{ loop.index }}{% if earTags.length > 1 %} of {{ earTags.length }}{% endif %}
               </legend>
               <div class="moj-add-another__item-container">
-
+                {{"data['movement-type']= "  + data['movement-type'] }} <br>
+                {{"isOffMovement= " +  isOffMovement }}
                 <div class="govuk-form-group {% if tagError %}govuk-form-group--error{% endif %}">
                   <label class="govuk-label" for="movement-ear-tags-{{ index }}">
                     Ear tag number
@@ -260,7 +262,6 @@
       document.addEventListener('moj-add-another:remove-item', syncDateHints)
     })()
   </script>
-
   {% if isOffMovement %}
   <script src="https://unpkg.com/accessible-autocomplete/dist/accessible-autocomplete.min.js"></script>
   <script>
