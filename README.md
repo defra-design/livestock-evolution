@@ -1,4 +1,4 @@
-# Livestock Traceability
+# Livestock Evolution
 
 An interactive prototype of the **Livestock Information** service, built with the [GOV.UK Prototype Kit](https://prototype-kit.service.gov.uk/docs/).
 
@@ -69,8 +69,8 @@ Tags make it possible to tell at a glance which version of a journey was used fo
 
 ```bash
 # Clone the repository
-git clone https://github.com/defra-design/livestock-traceability.git
-cd livestock-traceability
+git clone https://github.com/defra-design/livestock-evolution.git
+cd livestock-evolution
 
 # Install dependencies
 npm install

@@ -1,0 +1,7 @@
+{% macro govukPublishingPrintLink(params) %}
+<div class="gem-c-print-link govuk-!-display-none-print govuk-!-margin-bottom-6{% if params.classes %} {{ params.classes }}{% endif %}">
+  <button class="gem-c-button__outline gem-c-button__outline--print govuk-!-margin-bottom-0" type="button" onclick="window.print()">
+    {{ params.text | default('Print this page') }}
+  </button>
+</div>
+{% endmacro %}

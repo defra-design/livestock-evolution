@@ -1,0 +1,25 @@
+{% macro govukPublishingContentsList(params) %}
+<nav class="gem-c-contents-list govuk-!-margin-bottom-6{% if params.classes %} {{ params.classes }}{% endif %}" aria-label="{{ params.aria_label | default('Pages in this guide') }}" role="navigation">
+  
+  {# Heading defaults to 'Contents' at 16px regular weight #}
+  <h2 class="gem-c-contents-list__title">
+    {{ params.title | default('Contents') }}
+  </h2>
+
+  <ol class="gem-c-contents-list__list">
+    {% for item in params.items %}
+      <li class="gem-c-contents-list__list-item gem-c-contents-list__list-item--dashed">
+        {# Em-dash marker hidden from screen readers #}
+        <span class="gem-c-contents-list__list-item-dash" aria-hidden="true"></span>
+        
+        {% if item.active %}
+          <span class="gem-c-contents-list__active-item" aria-current="page">{{ item.text }}</span>
+        {% else %}
+          <a class="gem-c-contents-list__link govuk-link" href="{{ item.href }}">{{ item.text }}</a>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+
+</nav>
+{% endmacro %}

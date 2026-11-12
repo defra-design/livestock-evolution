@@ -1,0 +1,282 @@
+{% extends "layouts/main.html" %}
+
+{% from "components/metadata.njk" import govukPublishingMetadata %}
+{% from "components/devolved-nations.njk" import govukPublishingDevolvedNations %}
+{% from "components/notification-button.njk" import govukPublishingNotificationButton %}
+{% from "components/print-link.njk" import govukPublishingPrintLink %}
+{% from "components/back-to-top.njk" import govukPublishingBackToTop %}
+{% from "components/contextual-footer.njk" import govukPublishingContextualFooter %}
+{% from "components/contents-list.njk" import govukPublishingContentsList %}
+
+{% set pageTitle = "Report and view livestock information" %}
+
+{% block pageTitle %}
+{{ pageTitle }} - GOV.UK
+{% endblock %}
+
+{% block beforeContent %}
+{{ govukBreadcrumbs({
+items: [
+{
+text: "Home",
+href: "#"
+},
+{
+text: "Section",
+href: "#"
+},
+{
+text: "Subsection"
+}
+]
+}) }}
+{% endblock %}
+
+{% block content %}
+
+{# Row 1: Header, Lead paragraph, and Metadata block across two-thirds #}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    <span class="govuk-caption-xl">Guidance</span>
+    <h1 class="govuk-heading-xl govuk-!-margin-bottom-4">
+      {{ pageTitle }}
+    </h1>
+    <p class="govuk-body-l">
+      Check and update the records for the cattle on your holding in England. This service replaces Cattle Tracing
+      System (CTS) Online.
+    </p>
+
+    {# 1. Top Metadata Block (Now sits at the bottom of Row 1) #}
+    {{ govukPublishingMetadata({
+    border_top: true,
+    from: '<a href="#" class="govuk-link">Environment Agency</a> and <a href="#" class="govuk-link">Department for
+      Environment, Food & Rural Affairs</a>',
+    first_published: "12 February 2026",
+    last_updated: "26 February 2026",
+    see_updates_link: true
+    }) }}
+  </div>
+</div>
+
+{# Row 2: Begins with the action buttons on the left, sidebar on the right #}
+<div class="govuk-grid-row">
+
+  {# Main Content #}
+  <div class="govuk-grid-column-two-thirds">
+
+    {# Action Buttons start Row 2 here #}
+    <div class="published-dates-button-group">
+      {{ govukPublishingNotificationButton() }}
+      {{ govukPublishingPrintLink() }}
+    </div>
+
+    {# Devolved Nations Banner #}
+    {{ govukPublishingDevolvedNations({
+    title: "Applies to England",
+    alternative_content: [
+    { text: "Guidance for Northern Ireland", href: "#" },
+    { text: "Guidance for Scotland", href: "#" },
+    { text: "Guidance for Wales", href: "#" }
+    ]
+    }) }}
+
+    {# Contents List (Anchor links to sections below) #}
+    <div id="contents">
+      {{ govukPublishingContentsList({
+      items: [
+      { text: "You can", href: "#you-can" },
+      { text: "Before you start", href: "#before-you-start" },
+      { text: "Sign in or create your account", href: "#sign-in" },
+      { text: "Other ways to report", href: "#other-ways-to-report" },
+      { text: "Get help with this service", href: "#get-help" }
+      ]
+      }) }}
+    </div>
+
+    {# 4. Guidance Content #}
+    <p class="govuk-body">You can:</p>
+    <ul class="govuk-list govuk-list--bullet">
+      <li>register a calf birth</li>
+      <li>report a cattle birth</li>
+      <li>report cattle, bison or buffalo moving on or off your holding</li>
+      <li>check the details of individual animals</li>
+      <li>correct something you have already reported</li>
+    </ul>
+
+    <p class="govuk-body">Registering takes around 5 minutes.</p>
+
+    <h2 class="govuk-heading-m">Before you start</h2>
+    <p class="govuk-body">
+      To use this service you need a County Parish Holding (CPH) number.
+    </p>
+    <p class="govuk-body">
+      If you do not have a CPH number yet, you'll need to <a class="govuk-link"
+        href="https://www.gov.uk/guidance/apply-for-a-county-parish-holding-cph-number">set up as a livestock keeper
+        first</a>. When you're set up, you can create your account.
+    </p>
+    <p class="govuk-body">
+      You can’t register for this service if you’re in the UK illegally.
+    </p>
+
+    <h2 class="govuk-heading-m">Sign in or create your account</h2>
+    <p class="govuk-body">
+      If you already have an account, you will be able to sign in, or create one if you haven't already.
+    </p>
+
+    {{ govukButton({
+    text: "Start now",
+    href: "/evolution/record-movement/check-holding",
+    isStartButton: true
+    }) }}
+
+    <h2 class="govuk-heading-m">Other ways to report</h2>
+    <p class="govuk-body">
+      You can also report a birth, movement or death by phone or post, or using farm software. The rules and deadlines
+      are different for each task.
+    </p>
+
+    <p class="govuk-body">Find out how to:</p>
+    <ul class="govuk-list govuk-list--bullet">
+      <li><a class="govuk-link" href="https://www.gov.uk/guidance/get-a-cattle-passport">register a calf birth</a></li>
+      <li><a class="govuk-link" href="https://www.gov.uk/guidance/report-and-record-cattle-movements">register a cattle
+          birth</a></li>
+      <li><a class="govuk-link"
+          href="https://www.gov.uk/guidance/report-and-record-cattle-deaths-on-the-holding">register a cattle death</a>
+      </li>
+    </ul>
+
+    <h2 class="govuk-heading-m">Get help with this service</h2>
+    <p class="govuk-body">
+      If you need help using this service, contact <a class="govuk-link"
+        href="https://www.gov.uk/government/organisations/british-cattle-movement-service">BCMS</a>. If you need help
+      getting a CPH number, contact the <a class="govuk-link"
+        href="https://www.gov.uk/government/organisations/rural-payments-agency">Rural Payments Agency</a>.
+    </p>
+
+    {# 5. Bottom Update History Section #}
+    <div data-module="metadata"
+      class="gem-c-metadata gem-c-metadata--border-top govuk-!-margin-top-8 govuk-!-margin-bottom-6">
+      <h2 class="govuk-visually-hidden">Updates to this page</h2>
+      <dl class="gem-c-metadata__list">
+        <dt class="gem-c-metadata__term">Last updated:</dt>
+        <dd class="gem-c-metadata__definition">
+          26 February 2026
+          <div class="govuk-!-margin-top-2">
+            <details class="gem-c-details govuk-details gem-c-details--small govuk-!-margin-bottom-0"
+              id="full-publication-update-history">
+              <summary class="govuk-details__summary">
+                <span class="govuk-details__summary-text govuk-!-font-size-16">
+                  Show all updates
+                </span>
+              </summary>
+              <div class="govuk-details__text govuk-!-padding-left-0" style="border-left: 0;">
+                <ol class="govuk-list govuk-!-margin-bottom-0">
+                  <li class="govuk-!-margin-bottom-3">
+                    <time datetime="2026-02-26" class="govuk-body-s govuk-!-font-weight-bold govuk-!-display-block">26
+                      February 2026</time>
+                    <p class="govuk-body-s govuk-!-margin-bottom-0">Updated the movement guidance and rules.</p>
+                  </li>
+                  <li class="govuk-!-margin-bottom-0">
+                    <time datetime="2026-02-12" class="govuk-body-s govuk-!-font-weight-bold govuk-!-display-block">12
+                      February 2026</time>
+                    <p class="govuk-body-s govuk-!-margin-bottom-0">First published.</p>
+                  </li>
+                </ol>
+              </div>
+            </details>
+          </div>
+        </dd>
+      </dl>
+    </div>
+
+    {# 6. Bottom Action Buttons #}
+    <div class="published-dates-button-group">
+      {{ govukPublishingNotificationButton() }}
+      {{ govukPublishingPrintLink() }}
+    </div>
+
+    {# 7. Back to Top Link #}
+    {{ govukPublishingBackToTop({
+    href: "#main-content",
+    text: "Contents"
+    }) }}
+
+    {# Contextual Footer spans full container width #}
+    {{ govukPublishingContextualFooter({
+    title: "Explore the topic",
+    items: [
+    {
+    text: "Keeping farm animals",
+    href: "#"
+    },
+    {
+    text: "Livestock identification and traceability",
+    href: "#"
+    },
+    {
+    text: "Animal welfare and disease control",
+    href: "#"
+    }
+    ]
+    }) }}
+
+  </div>
+
+  {# Sidebar: Aligns directly with the button row #}
+  <div class="govuk-grid-column-one-third">
+    <aside class="govuk-prototype-kit-common-templates-related-items" role="complementary">
+      <h2 class="govuk-heading-s" id="subsection-title">
+        Related content
+      </h2>
+      <nav role="navigation" aria-labelledby="subsection-title">
+        <ul class="govuk-list govuk-!-font-size-16">
+          <li>
+            <a href="https://www.gov.uk/guidance/apply-for-a-county-parish-holding-cph-number"
+              class="govuk-link govuk-!-font-weight-bold">
+              Apply for a county parish holding (CPH) number
+            </a>
+          </li>
+          <li>
+            <a href="https://www.gov.uk/government/collections/keeping-cattle-bison-and-buffalo-in-england-and-wales"
+              class="govuk-link govuk-!-font-weight-bold">
+              Keeping cattle, bison and buffalo in England and Wales
+            </a>
+          </li>
+          <li>
+            <a href="https://www.gov.uk/government/collections/keeping-sheep-and-goats-in-england"
+              class="govuk-link govuk-!-font-weight-bold">
+              Keeping sheep and goats in England
+            </a>
+          </li>
+          <li>
+            <a href="https://www.gov.uk/government/collections/keeping-pigs-in-england"
+              class="govuk-link govuk-!-font-weight-bold">
+              Keeping pigs in England
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+  </div>
+
+</div>
+</div>
+
+{% endblock %}
+
+{% block pageScripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const seeUpdatesLink = document.querySelector('a[href="#full-publication-update-history"]');
+    const updateDetails = document.getElementById('full-publication-update-history');
+
+    if (seeUpdatesLink && updateDetails) {
+      seeUpdatesLink.addEventListener('click', function () {
+        if (!updateDetails.hasAttribute('open')) {
+          updateDetails.setAttribute('open', '');
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

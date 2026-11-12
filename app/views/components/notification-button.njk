@@ -1,0 +1,7 @@
+{% macro govukPublishingNotificationButton(params) %}
+<div data-button-location="top" data-button-text-subscribe="{{ params.text | default('Get emails about this page') }}" class="gem-c-single-page-notification-button govuk-!-display-none-print govuk-!-margin-bottom-6{% if params.classes %} {{ params.classes }}{% endif %}">
+  <button class="gem-c-button__outline gem-c-button__outline--notification" type="button">
+    {{ params.text | default('Get emails about this page') }}
+  </button>
+</div>
+{% endmacro %}

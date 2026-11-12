@@ -1,0 +1,23 @@
+{% macro govukPublishingContextualFooter(params) %}
+<div class="gem-c-contextual-footer govuk-!-display-none-print{% if params.classes %} {{ params.classes }}{% endif %}">
+  <div class="gem-c-related-navigation">
+    <nav role="navigation" class="gem-c-related-navigation__nav-section" aria-labelledby="related-nav-topics-title">
+      
+      {# Section heading (defaults to 'Explore the topic' if none provided) #}
+      <h2 id="related-nav-topics-title" class="gem-c-related-navigation__sub-heading gem-c-related-navigation__sub-heading--footer">
+        {{ params.title | default('Explore the topic') }}
+      </h2>
+      
+      {# Taxonomy / topic links list #}
+      <ul class="gem-c-related-navigation__link-list">
+        {% for item in params.items %}
+          <li class="gem-c-related-navigation__link">
+            <a class="govuk-link" href="{{ item.href }}">{{ item.text }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+
+    </nav>
+  </div>
+</div>
+{% endmacro %}

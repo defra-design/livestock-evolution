@@ -1,0 +1,25 @@
+{% macro govukPublishingMetadata(params) %}
+<div data-module="metadata" class="gem-c-metadata{% if params.border_top %} gem-c-metadata--border-top{% endif %} govuk-!-margin-bottom-{{ params.margin_bottom | default('6') }}">
+  <dl class="gem-c-metadata__list">
+    <dt class="gem-c-metadata__term">From:</dt>
+    <dd class="gem-c-metadata__definition">
+      {{ params.from | default('<a href="#" class="govuk-link">Environment Agency</a> and <a href="#" class="govuk-link">Department for Environment, Food & Rural Affairs</a>') | safe }}
+    </dd>
+
+    <dt class="gem-c-metadata__term">Published:</dt>
+    <dd class="gem-c-metadata__definition">
+      {{ params.first_published | default('12 February 2026') }}
+    </dd>
+
+    {% if params.last_updated %}
+      <dt class="gem-c-metadata__term">Last updated:</dt>
+      <dd class="gem-c-metadata__definition">
+        {{ params.last_updated }}
+        {% if params.see_updates_link %}
+          &#8212; <a href="{{ params.see_updates_url | default('#full-publication-update-history') }}" class="govuk-link govuk-!-display-none-print">See all updates</a>
+        {% endif %}
+      </dd>
+    {% endif %}
+  </dl>
+</div>
+{% endmacro %}

@@ -1,0 +1,56 @@
+.gem-c-metadata {
+  font-family: "GDS Transport", arial, sans-serif;
+  @include govuk-font(16);
+  color: $govuk-secondary-text-colour;
+
+  &--border-top {
+    border-top: 1px solid $govuk-border-colour;
+    padding-top: govuk-spacing(3);
+  }
+
+  &--inverse {
+    color: govuk-colour("white");
+
+    .gem-c-metadata__term,
+    .gem-c-metadata__definition {
+      color: govuk-colour("white");
+
+      .govuk-link {
+        color: govuk-colour("white");
+
+        &:hover {
+          color: $govuk-focus-colour;
+        }
+      }
+    }
+  }
+
+  &__list {
+    display: grid;
+    grid-template-columns: 105px 1fr;
+    gap: 0; // Gutters reduced to 0
+    align-items: baseline;
+    margin: 0;
+    padding: 0;
+  }
+
+  &__term {
+    grid-column: 1;
+    margin: 0;
+    padding: 0 10px 0 0; // Padding: top 0, right 10px, bottom 0, left 0
+    color: $govuk-secondary-text-colour;
+    font-weight: normal;
+  }
+
+  &__definition {
+    grid-column: 2;
+    margin: 0 0 10px 0; // Bottom margin: 10px
+    padding: 0;
+    font-weight: normal;
+    color: $govuk-text-colour;
+
+    .govuk-link {
+      font-weight: bold;
+    }
+  }
+}

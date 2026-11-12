@@ -1,0 +1,29 @@
+.gem-c-back-to-top {
+  // Matches production wrapper padding: 0 top, 0 right, 10px bottom, 0 left
+  padding: 0 0 govuk-spacing(2) 0;
+
+  &__link {
+    display: inline-block;
+    padding: 0 0 govuk-spacing(2) 0;
+    
+    // Uses 16px GDS Transport with regular weight (production is not bold)
+    @include govuk-font(16, $weight: regular);
+    
+    // Standard GOV.UK underline styling and offset
+    text-decoration: underline;
+    text-decoration-thickness: max(1px, .0625rem);
+    text-underline-offset: .1578em;
+
+    &:hover {
+      // Thickens underline on hover to match GOV.UK link interaction
+      text-decoration-thickness: max(3px, .1875rem, .12em);
+    }
+  }
+
+  &__icon {
+    display: inline-block;
+    margin-right: govuk-spacing(2); // 10px gap between upward arrow and text
+    vertical-align: middle;         // Keeps arrow centred with regular-weight text
+    fill: currentColor;             // Inherits link blue (or black on focus)
+  }
+}
