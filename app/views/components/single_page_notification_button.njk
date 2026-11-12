@@ -1,0 +1,10 @@
+{% macro govukPublishingNotificationButton(params) %}
+<div class="gem-c-single-page-notification-button govuk-!-display-none-print{% if params.classes %} {{ params.classes }}{% endif %}">
+  <button type="button" class="gem-c-button__outline gem-c-button__outline--notification">
+    <svg class="gem-c-button__outline-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
+      <path d="M14 3H2c-.55 0-1 .45-1 1v8c0 .55.45 1 1 1h12c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zm-.4 2L8 8.8 2.4 5h11.2zM2 11.6V5.8l5.5 3.7c.3.2.7.2 1 0L14 5.8v5.8H2z"/>
+    </svg>
+    <span>{{ params.text | default('Get emails about this page') }}</span>
+  </button>
+</div>
+{% endmacro %}

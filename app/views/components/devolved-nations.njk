@@ -1,0 +1,17 @@
+{% macro govukPublishingDevolvedNations(params) %}
+<section aria-label="Nation" class="gem-c-devolved-nations govuk-!-margin-bottom-{{ params.margin_bottom | default('6') }}">
+  <h2 class="govuk-heading-s govuk-!-margin-bottom-0">
+    {{ params.title | default('Applies to England') }}
+  </h2>
+
+  {% if params.alternative_content and params.alternative_content.length %}
+    <ul class="govuk-list govuk-!-margin-top-1 govuk-!-margin-bottom-0">
+      {% for item in params.alternative_content %}
+        <li>
+          <a class="govuk-link" href="{{ item.href }}">{{ item.text }}</a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</section>
+{% endmacro %}

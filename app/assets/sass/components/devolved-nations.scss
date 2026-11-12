@@ -1,0 +1,23 @@
+.gem-c-devolved-nations {
+  background-color: govuk-colour("light-grey");
+  padding: govuk-spacing(3) govuk-spacing(4);
+  font-family: "GDS Transport", arial, sans-serif;
+  @include govuk-font(16);
+
+  .govuk-heading-s {
+    margin-bottom: 0;
+  }
+
+  .govuk-list {
+    margin-top: govuk-spacing(1);
+    margin-bottom: 0;
+
+    li {
+      margin-bottom: govuk-spacing(1);
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+}
