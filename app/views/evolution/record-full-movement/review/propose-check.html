@@ -1,16 +1,18 @@
 {% extends "layouts/main.html" %}
-{% set pageName = "Check proposed changes" %}
+{% set pageName = "Check your answers" %}
 {% block beforeContent %}
-  <a class="govuk-back-link" href="{{ root }}/{{ movement.id }}/propose">Back</a>
+  <a class="govuk-back-link" href="{{ root }}/{{ movement.id }}/propose/reason">Back</a>
 {% endblock %}
 {% block content %}
 <div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
   <span class="govuk-caption-l">Movement {{ movement.id }}</span>
-  <h1 class="govuk-heading-l">Check your proposed changes</h1>
+  <h1 class="govuk-heading-l">Check your answers</h1>
   <p class="govuk-body">This is the movement as you propose it should be recorded. The original report will be kept until the reporting keeper accepts or disputes your changes.</p>
   {% if error %}<p class="govuk-error-message"><span class="govuk-visually-hidden">Error:</span> {{ error }}</p>{% endif %}
   <dl class="govuk-summary-list">
-    <div class="govuk-summary-list__row"><dt class="govuk-summary-list__key">Movement date</dt><dd class="govuk-summary-list__value">{{ draft.date }}</dd><dd class="govuk-summary-list__actions">{% if dateSelected %}<a class="govuk-link" href="{{ root }}/{{ movement.id }}/propose/date">Change<span class="govuk-visually-hidden"> movement date</span></a>{% endif %}</dd></div>
+    {% for item in [{'key':'off','label':'Date cattle left','value':draft.offDate},{'key':'on','label':'Date cattle arrived','value':draft.onDate}] %}
+    <div class="govuk-summary-list__row"><dt class="govuk-summary-list__key">{{ item.label }}</dt><dd class="govuk-summary-list__value">{{ item.value or 'Not provided' }}</dd><dd class="govuk-summary-list__actions">{% if dateSelected and item.key in dateKeys %}<a class="govuk-link" href="{{ root }}/{{ movement.id }}/propose/date/{{ item.key }}">Change<span class="govuk-visually-hidden"> {{ item.label }}</span></a>{% endif %}</dd></div>
+    {% endfor %}
     <div class="govuk-summary-list__row"><dt class="govuk-summary-list__key">Number of cattle</dt><dd class="govuk-summary-list__value">{{ proposedAnimals | length }}</dd><dd class="govuk-summary-list__actions">{% if animalsSelected %}<a class="govuk-link" href="{{ root }}/{{ movement.id }}/propose/animals">Change<span class="govuk-visually-hidden"> cattle</span></a>{% endif %}</dd></div>
   </dl>
   <h2 class="govuk-heading-m">Cattle in the proposed movement</h2>
@@ -23,15 +25,19 @@
   </table>
 </div></div>
 <div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
-  <h2 class="govuk-heading-m">Now send your proposed changes</h2>
-  <p class="govuk-body">The reporting keeper will be asked to accept or dispute these changes. The whole movement will not be confirmed yet.</p>
-  <form method="post" action="{{ root }}/{{ movement.id }}/propose/submit">
-    <div class="govuk-form-group">
-      <label class="govuk-label govuk-label--m" for="reason">Why are you proposing these changes?</label>
-      <textarea class="govuk-textarea" name="reason" id="reason" rows="4">{{ draft.note }}</textarea>
+  <h2 class="govuk-heading-m">Reason for amendments</h2>
+  <dl class="govuk-summary-list">
+    <div class="govuk-summary-list__row">
+      <dt class="govuk-summary-list__key">Description</dt>
+      <dd class="govuk-summary-list__value">{{ draft.note }}</dd>
+      <dd class="govuk-summary-list__actions"><a class="govuk-link" href="{{ root }}/{{ movement.id }}/propose/reason">Change<span class="govuk-visually-hidden"> reason for amendments</span></a></dd>
     </div>
-    <button class="govuk-button" type="submit">Submit proposed changes</button>
+  </dl>
+  <h2 class="govuk-heading-m">Send your proposed amendments</h2>
+  <p class="govuk-body">The reporting keeper will be asked to accept or dispute the amendments. The movement will not be confirmed yet.</p>
+  <form method="post" action="{{ root }}/{{ movement.id }}/propose/submit">
+    <button class="govuk-button" type="submit">Submit proposed amendments</button>
   </form>
-  <p class="govuk-body"><a class="govuk-link" href="{{ root }}/{{ movement.id }}/propose/cancel">Cancel proposed changes</a></p>
+  <p class="govuk-body"><a class="govuk-link" href="{{ root }}/{{ movement.id }}/propose/cancel">Cancel amendments</a></p>
 </div></div>
 {% endblock %}

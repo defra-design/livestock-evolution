@@ -1,0 +1,7 @@
+{% extends "layouts/main.html" %}
+{% set pageName = "Abattoir movements" %}
+{% block content %}
+<div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
+<div class="govuk-panel govuk-panel--confirmation"><h1 class="govuk-panel__title">Cattle deaths reported</h1><div class="govuk-panel__body">{{ movement.id }}</div></div><p class="govuk-body">{{ movement.deaths.length }} of {{ movement.tags.length }} cattle now have a death recorded for this movement.</p>{% if remaining.length %}<p class="govuk-body">{{ remaining.length }} cattle still need a death reported when they are slaughtered.</p><a class="govuk-button" href="{{ root }}/{{ movement.id }}/death">Report remaining deaths</a>{% endif %}<p><a class="govuk-link" href="{{ root }}/{{ movement.id }}">Return to movement details</a></p>
+</div></div>
+{% endblock %}

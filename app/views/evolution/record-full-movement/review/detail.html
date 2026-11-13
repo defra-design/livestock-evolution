@@ -46,13 +46,13 @@
     <div class="govuk-summary-list__row">
     <dt class="govuk-summary-list__key">Date cattle left</dt>
     <dd class="govuk-summary-list__value">
-      {{ movement.offDate or 'Not known' }}
+      {% if movement.offDate %}{{ movement.offDate }}{% elif movement.canReview %}Not provided<p class="govuk-hint govuk-!-margin-top-2 govuk-!-margin-bottom-0">You can provide this date when you confirm the movement or propose changes.</p>{% else %}Not provided{% endif %}
     </dd>
   </div>
   <div class="govuk-summary-list__row">
     <dt class="govuk-summary-list__key">Date cattle arrived</dt>
     <dd class="govuk-summary-list__value">
-      {{ movement.onDate or 'Not known' }}
+      {% if movement.onDate %}{{ movement.onDate }}{% elif movement.canReview %}Not provided<p class="govuk-hint govuk-!-margin-top-2 govuk-!-margin-bottom-0">You can provide this date when you confirm the movement or propose changes.</p>{% else %}Not provided{% endif %}
     </dd>
   </div>
   <div class="govuk-summary-list__row">
@@ -113,18 +113,30 @@
     Only the details they want to change are shown below.
   </p>
 
-  {% if movement.proposalDiff.dateChanged %}
-    <h3 class="govuk-heading-s">Movement date</h3>
-    <dl class="govuk-summary-list govuk-!-margin-bottom-6">
-      <div class="govuk-summary-list__row">
-        <dt class="govuk-summary-list__key">Originally reported</dt>
-        <dd class="govuk-summary-list__value">{{ movement.date }}</dd>
-      </div>
-      <div class="govuk-summary-list__row">
-        <dt class="govuk-summary-list__key">Proposed date</dt>
-        <dd class="govuk-summary-list__value">{{ movement.proposal.date }}</dd>
-      </div>
-    </dl>
+  {% if movement.proposalDiff.dateChanges.length %}
+    <h3 class="govuk-heading-s">Changes to movement dates</h3>
+    {% for change in movement.proposalDiff.dateChanges %}
+      <h4 class="govuk-heading-s">{{ change.label }}</h4>
+      <dl class="govuk-summary-list govuk-!-margin-bottom-5">
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key"><strong class="govuk-tag govuk-tag--red">Original</strong></dt>
+          <dd class="govuk-summary-list__value"><s>{{ change.original }}</s></dd>
+        </div>
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key"><strong class="govuk-tag govuk-tag--green">Proposed</strong></dt>
+          <dd class="govuk-summary-list__value">{{ change.proposed }}</dd>
+        </div>
+      </dl>
+    {% endfor %}
+  {% endif %}
+  {% if movement.proposal %}
+    {% if movement.onDate and movement.reviewProvidedDate == 'on' %}
+      <h3 class="govuk-heading-s">Date provided by the other keeper</h3>
+      <p class="govuk-body">Date cattle arrived: {{ movement.onDate }}</p>
+    {% elif movement.offDate and movement.reviewProvidedDate == 'off' %}
+      <h3 class="govuk-heading-s">Date provided by the other keeper</h3>
+      <p class="govuk-body">Date cattle left: {{ movement.offDate }}</p>
+    {% endif %}
   {% endif %}
 
   <h3 class="govuk-heading-s">Changes to cattle</h3>
@@ -186,11 +198,7 @@
     <p class="govuk-body">No changes to the cattle in this movement.</p>
   {% endif %}
 {% endif %}
-{% if error %}
-  <p class="govuk-error-message">
-    <span class="govuk-visually-hidden">Error:</span> {{ error }}
-  </p>
-{% endif %}
+
 {% if movement.canReview %}
 <form method="post" action="{{ root }}/{{ movement.id }}/review" novalidate>
 {{ govukRadios({

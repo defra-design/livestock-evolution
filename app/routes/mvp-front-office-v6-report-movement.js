@@ -21,7 +21,7 @@ router.post(`${BASE}/movement-type`, (req, res) => {
       errors: { 'movement-type': 'Select if this is an on or off movement' }
     })
   }
-
+  
   // The movement date is now asked per animal on the ear tag numbers page
   returnToCheck(req, res, `${BASE}/ear-tag-numbers`)
 })

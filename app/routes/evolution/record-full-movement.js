@@ -57,6 +57,15 @@ function render (req, res, page, extras = {}, status = 200) {
   return res.status(status).render(VIEW + page, { base: BASE, draft: data(req), sender: SENDER, isOn: data(req).direction === 'on', ...extras })
 }
 function invalid (req, res, page, errors, extras) { return render(req, res, page, { errors, ...(extras || {}) }, 400) }
+// An abattoir can receive cattle but cannot be the sending location for an ON report.
+function prohibitedSendingLocation (d) {
+  return d.direction === 'on' && (d.destinationType === 'slaughterhouse' ||
+    (getDestination(d) && getDestination(d).type === 'slaughterhouse'))
+}
+function permittedPrevious (d) {
+  return PREVIOUS_IDS.map(id => DESTINATIONS.find(x => x.id === id))
+    .filter(x => x && !(d.direction === 'on' && x.type === 'slaughterhouse')).slice(0, 10)
+}
 function getDestination (d) {
   return (d.destinationType === 'other' && d.otherDestination) ||
     DESTINATIONS.find(x => x.id === d.destinationId && x.type === d.destinationType) || null
@@ -106,13 +115,15 @@ function requireOtherDate (req, res) {
 }
 function requireDestination (req, res) {
   if (data(req).direction !== 'on' && !requireDate(req, res)) return false
+  if (prohibitedSendingLocation(data(req))) { go(res, '/destination-type'); return false }
   if (!getDestination(data(req))) { go(res, '/previous-destinations'); return false }
+  if (data(req).destinationType === 'other' && !data(req).otherDestination.address) { go(res, '/destination-address'); return false }
   return true
 }
 function requireType (req, res) {
   if (data(req).direction === 'on') { if (!data(req).direction) { go(res, '/movement-type'); return false } }
   else if (!requireDate(req, res)) return false
-  if (!TYPES.includes(data(req).destinationType)) { go(res, '/destination-type'); return false }
+  if (!TYPES.includes(data(req).destinationType) || prohibitedSendingLocation(data(req))) { go(res, '/destination-type'); return false }
   return true
 }
 // Compare with today's calendar date in the UK, regardless of server timezone.
@@ -174,20 +185,25 @@ function animalPageData (d) {
 }
 function clearRecent (d) { d.lastBatch = []; d.lastBatchIsAdditional = false; d.lastFailures = [] }
 
-function listMatches (d) { return DESTINATIONS.filter(x => x.type === d.destinationType) }
+function listMatches (d) { return DESTINATIONS.filter(x => d.destinationType === 'other' || x.type === d.destinationType) }
 function searchDestinations (d, query) {
   const words = strip(query).toLowerCase().split(/\s+/).filter(Boolean)
   return words.length ? listMatches(d).filter(x => words.every(word => (x.address + ' ' + x.name + ' ' + x.identifier).toLowerCase().includes(word))) : []
 }
 function selectDestination (d, destination) {
-  d.destinationId = destination.id
+  if (d.destinationType === 'other' && d.otherDestination) {
+    // The postcode search supplies the address, not the destination's type or identifier.
+    d.otherDestination.address = destination.address
+  } else {
+    d.destinationId = destination.id
+  }
   d.confirmedDestination = false
   d.confirmation = null
 }
 function confirmationBack (d) {
+  if (d.destinationType === 'other') return '/destination-address'
   if (d.findMethod === 'address') return '/destination-address?q=' + enc(d.addressSearch)
   if (d.findMethod === 'identifier') return '/destination'
-  if (d.destinationType === 'other') return '/destination-other'
   return '/previous-destinations'
 }
 function clearDestination (d) {
@@ -349,12 +365,12 @@ function saveDate (d, parts, option) {
 
   router.get(`${BASE}/previous-destinations`, (req, res) => {
     if (data(req).direction !== 'on' && !requireDate(req, res)) return
-    return render(req, res, 'previous-destinations', { previousDestinations: PREVIOUS_IDS.map(id => DESTINATIONS.find(x => x.id === id)).filter(Boolean).slice(0, 10) })
+    return render(req, res, 'previous-destinations', { previousDestinations: permittedPrevious(data(req)) })
   })
   router.post(`${BASE}/previous-destinations`, (req, res) => {
     if (data(req).direction !== 'on' && !requireDate(req, res)) return
-    const id = strip(req.body['rfm-previous']), previous = PREVIOUS_IDS.map(k => DESTINATIONS.find(x => x.id === k)).find(x => x && x.id === id)
-    if (id !== 'new' && !previous) return invalid(req, res, 'previous-destinations', [err('previous-error', 'Select a destination')], { previousDestinations: PREVIOUS_IDS.map(k => DESTINATIONS.find(x => x.id === k)) })
+    const id = strip(req.body['rfm-previous']), previous = permittedPrevious(data(req)).find(x => x.id === id)
+    if (id !== 'new' && !previous) return invalid(req, res, 'previous-destinations', [err('previous-error', 'Select a destination')], { previousDestinations: permittedPrevious(data(req)) })
     const d = data(req); clearDestination(d)
     if (id === 'new') return go(res, '/destination-type')
     d.destinationType = previous.type; d.destinationId = previous.id
@@ -367,6 +383,7 @@ function saveDate (d, parts, option) {
   router.post(`${BASE}/destination-type`, (req, res) => {
     if (data(req).direction !== 'on' && !requireDate(req, res)) return
     const type = strip(req.body['rfm-destination-type'])
+    if (data(req).direction === 'on' && type === 'slaughterhouse') return invalid(req, res, 'destination-type', [err('destination-type-error', 'Cattle cannot move from an abattoir. Select a different sending location')])
     if (!TYPES.includes(type)) return invalid(req, res, 'destination-type', [err('destination-type-error', 'Select the type of destination')])
     const d = data(req); clearDestination(d); d.destinationType = type
     return go(res, type === 'other' ? '/destination-other' : '/find-method')
@@ -453,12 +470,26 @@ function saveDate (d, parts, option) {
   })
   router.post(`${BASE}/destination-other`, (req, res) => {
     if (!requireType(req, res)) return
-    const posted = { name: strip(req.body['rfm-other-name']), identifier: strip(req.body['rfm-other-id']), address: strip(req.body['rfm-other-address']) }
-    if (!posted.name || !posted.identifier || !posted.address) return invalid(req, res, 'destination-other', [err('other-details-error', 'Enter the name, identifier and address')], { posted })
+    const posted = {
+      name: strip(req.body['rfm-other-name']),
+      identifier: strip(req.body['rfm-other-id'])
+    }
+    if (!posted.name) {
+      return invalid(req, res, 'destination-other', [
+        err('other-name-error', 'Enter the type of destination')
+      ], { posted })
+    }
     const d = data(req)
-    d.otherDestination = { id: 'other', type: 'other', idLabel: 'Destination identifier', ...posted }
-    d.confirmedDestination = false; d.confirmation = null
-    return go(res, '/confirm-destination')
+    const previous = d.otherDestination || {}
+    d.otherDestination = {
+      id: 'other', type: 'other', idLabel: 'Destination identifier',
+      ...posted,
+      address: previous.name === posted.name && previous.identifier === posted.identifier ? previous.address : ''
+    }
+    d.findMethod = 'address'
+    d.confirmedDestination = false
+    d.confirmation = null
+    return go(res, '/destination-address')
   })
   router.get(`${BASE}/confirm-destination`, (req, res) => {
     if (!requireDestination(req, res)) return
